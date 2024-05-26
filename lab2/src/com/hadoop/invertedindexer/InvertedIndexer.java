@@ -173,12 +173,20 @@ public class InvertedIndexer {
         }
     }
 
-    public static int[] file_count = {1};
+    public static String input_address = "/data/exp2";
     public static class TFIDFReducer extends Reducer <Text, Text, Text, Text> {
+        private int file_count = 40;
+        public void setup(Context context)
+                throws IOException, InterruptedException {
+            Configuration conf = context.getConfiguration();
+            FileSystem hdfs = FileSystem.get(conf);
+            FileStatus[] p = hdfs.listStatus(new Path(input_address));        // to get the file count
+            file_count = p.length;
+        }
+
         @Override
         public void reduce(Text key, Iterable<Text> value, Context context)
-                throws IOException, InterruptedException
-        {
+                throws IOException, InterruptedException {
             String word = key.toString();
             int sum = 0;
             List<String> value_lst = new ArrayList<>();
@@ -186,7 +194,7 @@ public class InvertedIndexer {
                 sum += 1;
                 value_lst.add(v.toString());
             }
-            double idf = Math.log10(1.0 * file_count[0] / (sum + 1)); // get the IDF!
+            double idf = Math.log10(1.0 * file_count / (sum + 1)); // get the IDF!
             for (String v : value_lst) {
                 String filename = v.split(":")[0];
                 int tf = Integer.parseInt(v.split(":")[1]);
@@ -197,55 +205,53 @@ public class InvertedIndexer {
     }
 
     public static void main(String[]args) throws Exception{
-            if(args.length < 2) {
-                System.err.println("Usage: Relation <in> <out1> (<out2> <out3>)");
-                System.exit(2);
-            }
-            Configuration conf = new Configuration();
-            FileSystem hdfs = FileSystem.get(conf);
-            FileStatus[] p = hdfs.listStatus(new Path(args[0]));    // to get the file count
-            file_count[0] = p.length;
+        if(args.length < 2) {
+            System.err.println("Usage: Relation <in> <out1> (<out2> <out3>)");
+            System.exit(2);
+        }
+        Configuration conf = new Configuration();
+        input_address = args[0];
 
-            // JOB1：倒排索引
-            Job job1 = Job.getInstance(conf, "InvertedIndex");
-            job1.setJarByClass(InvertedIndexer.class);
-            job1.setMapperClass(InvertedIndexMapper.class);
-            job1.setCombinerClass(InvertedIndexCombiner.class);
-            job1.setPartitionerClass(InvertedIndexPartitioner.class);
-            job1.setReducerClass(InvertedIndexReducer.class);
-            job1.setOutputKeyClass(Text.class);
-            job1.setOutputValueClass(Text.class);
-            FileInputFormat.addInputPath(job1, new Path(args[0]));
-            FileOutputFormat.setOutputPath(job1, new Path(args[1]));
-            job1.waitForCompletion(true);
-            if(args.length < 3) {
-                System.err.println("You can add an output address to run job2.");
-                System.exit(0);
-            }
-            // JOB2：单词频率全局排序，输出前50个高频词
-            Job job2 = Job.getInstance(conf, "Sort");
-            job2.setJarByClass(InvertedIndexer.class);
-            job2.setMapperClass(SortMapper.class);
-            job2.setReducerClass(SortReducer.class);
-            job2.setOutputKeyClass(DoubleWritable.class);
-            job2.setOutputValueClass(Text.class);
-            job2.setSortComparatorClass(SortDecreasingComparator.class);
-            FileInputFormat.addInputPath(job2, new Path(args[1]));
-            FileOutputFormat.setOutputPath(job2, new Path(args[2]));
-            job2.waitForCompletion(true);
-            if(args.length < 4) {
-                System.err.println("You can add an output address to run job3.");
-                System.exit(0);
-            }
-            // JOB3：为每个作品计算每个单词的TF-IDF
-            Job job3 = Job.getInstance(conf, "TF-IDF");
-            job3.setJarByClass(InvertedIndexer.class);
-            job3.setMapperClass(TFIDFMapper.class);
-            job3.setReducerClass(TFIDFReducer.class);
-            job3.setOutputKeyClass(Text.class);
-            job3.setOutputValueClass(Text.class);
-            FileInputFormat.addInputPath(job3, new Path(args[1]));
-            FileOutputFormat.setOutputPath(job3, new Path(args[3]));
-            System.exit(job3.waitForCompletion(true) ? 0 : 1);
+        // JOB1：倒排索引
+        Job job1 = Job.getInstance(conf, "InvertedIndex");
+        job1.setJarByClass(InvertedIndexer.class);
+        job1.setMapperClass(InvertedIndexMapper.class);
+        job1.setCombinerClass(InvertedIndexCombiner.class);
+        job1.setPartitionerClass(InvertedIndexPartitioner.class);
+        job1.setReducerClass(InvertedIndexReducer.class);
+        job1.setOutputKeyClass(Text.class);
+        job1.setOutputValueClass(Text.class);
+        FileInputFormat.addInputPath(job1, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job1, new Path(args[1]));
+        job1.waitForCompletion(true);
+        if(args.length < 3) {
+            System.err.println("You can add an output address to run job2.");
+            System.exit(0);
+        }
+        // JOB2：单词频率全局排序，输出前50个高频词
+        Job job2 = Job.getInstance(conf, "Sort");
+        job2.setJarByClass(InvertedIndexer.class);
+        job2.setMapperClass(SortMapper.class);
+        job2.setReducerClass(SortReducer.class);
+        job2.setOutputKeyClass(DoubleWritable.class);
+        job2.setOutputValueClass(Text.class);
+        job2.setSortComparatorClass(SortDecreasingComparator.class);
+        FileInputFormat.addInputPath(job2, new Path(args[1]));
+        FileOutputFormat.setOutputPath(job2, new Path(args[2]));
+        job2.waitForCompletion(true);
+        if(args.length < 4) {
+            System.err.println("You can add an output address to run job3.");
+            System.exit(0);
+        }
+        // JOB3：为每个作品计算每个单词的TF-IDF
+        Job job3 = Job.getInstance(conf, "TF-IDF");
+        job3.setJarByClass(InvertedIndexer.class);
+        job3.setMapperClass(TFIDFMapper.class);
+        job3.setReducerClass(TFIDFReducer.class);
+        job3.setOutputKeyClass(Text.class);
+        job3.setOutputValueClass(Text.class);
+        FileInputFormat.addInputPath(job3, new Path(args[1]));
+        FileOutputFormat.setOutputPath(job3, new Path(args[3]));
+        System.exit(job3.waitForCompletion(true) ? 0 : 1);
     }
 }
