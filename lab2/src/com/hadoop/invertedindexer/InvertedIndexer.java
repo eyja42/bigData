@@ -40,6 +40,9 @@ public class InvertedIndexer {
                 if (value_str.charAt(i) >= 'a' && value_str.charAt(i) <= 'z' || value_str.charAt(i) >= '0' && value_str.charAt(i) <= '9'){
                     sBuilder.append(value_str.charAt(i));
                 }
+                else if (i != 0 && value_str.charAt(i) == '\'' && (value_str.charAt(i-1) >= 'a' && value_str.charAt(i-1) <= 'z')){
+                    sBuilder.append(value_str.charAt(i));
+                }
                 else{
                     sBuilder.append(" ");
                 }
