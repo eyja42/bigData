@@ -16,7 +16,7 @@ import java.util.StringTokenizer;
 
 
 /* 选做内容。 */
-public class TriCount {
+public class TriCount_2 {
     public static String input_address;
 
     /*读取 边1-*/
@@ -141,7 +141,7 @@ public class TriCount {
         input_address = args[0];
 
         Job job1 = Job.getInstance(conf, "job1");
-        job1.setJarByClass(TriCount.class);
+        job1.setJarByClass(TriCount_2.class);
         job1.setMapperClass(Map1.class);
         job1.setReducerClass(Reduce1.class);
         job1.setMapOutputKeyClass(Text.class);
