@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.StringTokenizer;
 
 
-/*  必做部分  */
+/* 选做内容。 */
 public class TriCount {
     public static String input_address;
 
@@ -36,11 +36,9 @@ public class TriCount {
                 String temp = a;
                 a = b;
                 b = temp;
-                newValue.set("-");
-            }else{
-                newValue.set("+");
             }
             newKey.set(a + "+" + b);
+            newValue.set("+");
             context.write(newKey, newValue);
         }
 
@@ -50,21 +48,11 @@ public class TriCount {
     public static class Reduce1 extends Reducer<Text, Text, Text, Text> {
         //选做内容。因为在map中记录时都是小序号在前，所以一个key就代表一条边
         private Text newValue = new Text("+");
+
         @Override
         public void reduce(Text key, Iterable<Text> values, Context context)
                 throws IOException, InterruptedException {
-            boolean flag0 = false, flag1 = false;
-            for(Text val: values){
-                if(val.toString().equals("+")){
-                    flag0 = true;
-                }
-                if(val.toString().equals("-")){
-                    flag1 = true;
-                }
-            }
-            if(flag0 && flag1){
-                context.write(key, newValue);
-            }
+            context.write(key, newValue);
         }
     }
 
@@ -153,7 +141,7 @@ public class TriCount {
         input_address = args[0];
 
         Job job1 = Job.getInstance(conf, "job1");
-        job1.setJarByClass(TriCount_old.class);
+        job1.setJarByClass(TriCount.class);
         job1.setMapperClass(Map1.class);
         job1.setReducerClass(Reduce1.class);
         job1.setMapOutputKeyClass(Text.class);
@@ -162,12 +150,12 @@ public class TriCount {
         job1.setOutputValueClass(Text.class);
 
         FileInputFormat.addInputPath(job1, new Path(input_address));
-        FileOutputFormat.setOutputPath(job1, new Path("./output/out1"));
+        FileOutputFormat.setOutputPath(job1, new Path(args[1]+"out1"));
 
         job1.waitForCompletion(true);
 
         Job job2 = Job.getInstance(conf, "job2");
-        job2.setJarByClass(TriCount_old.class);
+        job2.setJarByClass(TriCount_full.class);
         job2.setMapperClass(Map2.class);
         job2.setReducerClass(Reduce2.class);
         job2.setMapOutputKeyClass(Text.class);
@@ -175,13 +163,13 @@ public class TriCount {
         job2.setOutputKeyClass(Text.class);
         job2.setOutputValueClass(Text.class);
 
-        FileInputFormat.addInputPath(job2, new Path("./output/out1"));
-        FileOutputFormat.setOutputPath(job2, new Path("./output/out2"));
+        FileInputFormat.addInputPath(job2, new Path(args[1]+"out1"));
+        FileOutputFormat.setOutputPath(job2, new Path(args[1]+"out2"));
 
         job2.waitForCompletion(true);
 
         Job job3 = Job.getInstance(conf, "job3");
-        job3.setJarByClass(TriCount_old.class);
+        job3.setJarByClass(TriCount_full.class);
         job3.setMapperClass(Map3.class);
         job3.setReducerClass(Reduce3.class);
         job3.setMapOutputKeyClass(Text.class);
@@ -189,8 +177,8 @@ public class TriCount {
         job3.setOutputKeyClass(Text.class);
         job3.setOutputValueClass(Text.class);
 
-        FileInputFormat.addInputPath(job3, new Path("./output/out2"));
-        FileOutputFormat.setOutputPath(job3, new Path("./output/finalOut"));
+        FileInputFormat.addInputPath(job3, new Path(args[1]+"out2"));
+        FileOutputFormat.setOutputPath(job3, new Path(args[1]+"finalOut"));
         job3.waitForCompletion(true);
 
     }
